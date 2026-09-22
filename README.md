@@ -4,7 +4,7 @@
 
 `mindmap.html` is the whole app: one file, no install, no account, no internet.
 
-The page above: <https://zurara.github.io/minimap/> — and a place to report anything broken:
+Project page: <https://zurara.github.io/minimap/>. Anything broken:
 <https://github.com/zurara/minimap/issues>
 
 **Open it** by double-clicking. It works offline — everything, including the icons, is inside that
