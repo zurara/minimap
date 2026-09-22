@@ -1,0 +1,6 @@
+.DS_Store
+__pycache__/
+
+# Your own maps stay yours. The empty folder ships; its contents do not.
+/maps/*
+!/maps/.gitkeep
