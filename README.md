@@ -102,7 +102,7 @@ tree with one thumb.
 
 ## License
 
-MIT — see `LICENSE`. Do what you like with it, including selling it; just keep the notice.
+MIT — see `LICENSE`.
 
 Two things in here are not mine: the app's interface icons are
 [RemixIcon](https://remixicon.com) 4.6.0 (Apache-2.0), inlined into `mindmap.html`, and the
