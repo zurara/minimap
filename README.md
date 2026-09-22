@@ -34,6 +34,24 @@ it, and hands you a JSON file to **Import**.
 Point your agent at **`AGENTS.md`**; it explains the format, the scripts, and the mistakes agents
 usually make here. Nothing in this is required — the app works on its own.
 
+### Installing the skills
+
+`SKILL.md` is an open format that around forty agents now read, so the `skills/` folder works
+anywhere — but two tools install it in one command:
+
+```bash
+# Claude Code
+/plugin marketplace add zurara/minimap
+/plugin install minimap@minimap
+
+# Gemini CLI
+gemini extensions install https://github.com/zurara/minimap
+```
+
+Anywhere else: copy `skills/` to wherever that agent keeps skills, or hand it the whole folder
+and point at `AGENTS.md`. Either way the converters in `tools/` come along, which is the part
+the skills actually need.
+
 Chrome and Firefox both autosave for a file opened from disk, so double-clicking is enough.
 
 If the top bar says **No autosave**, the page was not opened as a real page — usually it is still an

@@ -48,7 +48,22 @@ and swapping them produces a map with the wrong shape.
 
 ### Installing them
 
-Skills are picked up from a `skills/` directory your agent tool knows about. For Claude Code:
+`SKILL.md` is an open format, so the `skills/` folder is read by most agents as it stands. Two
+install it in one command, converters included:
+
+```bash
+# Claude Code — this repo is its own marketplace
+/plugin marketplace add zurara/minimap
+/plugin install minimap@minimap
+
+# Gemini CLI
+gemini extensions install https://github.com/zurara/minimap
+```
+
+Installed that way, `${CLAUDE_PLUGIN_ROOT}/tools/` (or the extension's own directory) holds the
+converters, and maps are written to `maps/` in the working directory.
+
+Working from this folder instead, symlink rather than copy, so there is one source of truth:
 
 ```bash
 ln -s "$PWD/skills/minimap-map" ~/.claude/skills/minimap-map
@@ -56,8 +71,8 @@ ln -s "$PWD/skills/minimap-decide" ~/.claude/skills/minimap-decide
 ln -s "$PWD/skills/minimap-concept" ~/.claude/skills/minimap-concept
 ```
 
-Symlink rather than copy, so there is one source of truth. The skills reference `tools/` and
-`maps/` by relative path, so run them with this folder as the working directory.
+Then `tools/` and `maps/` resolve relative to this folder, so run with it as the working
+directory.
 
 ## Things agents get wrong here
 
