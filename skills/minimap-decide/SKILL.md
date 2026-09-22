@@ -25,9 +25,10 @@ Paths are relative to the Minimap folder — the one holding the app
 | Decision maps | `maps/decision-<slug>.json` |
 | Converter | `tools/md2minimap.py` |
 
-Installed as a plugin there is no such folder: the converters ship with the skill, so every
-`tools/...` path below means `${CLAUDE_PLUGIN_ROOT}/tools/...`, and `maps/` is a folder in the
-working directory — create it if it is not there.
+Installed through an agent there is no such folder. The converters still ship alongside the
+skills, so every `tools/...` path below means `${CLAUDE_PLUGIN_ROOT}/tools/...` in Claude Code,
+and elsewhere `tools/` resolved from this file's own location — `../../tools/`. `maps/` is then
+a folder in the working directory; create it if it is not there.
 
 **Jurisdiction matters for the Legal facet.** If the user's jurisdiction is known from
 context, use it and name it. If it isn't, ask — or, if you can't ask, write the Legal facet

@@ -1,8 +1,11 @@
-# Mindmap
+# Minimap
+
+[![Minimap](https://zurara.github.io/minimap/screenshot.png)](https://zurara.github.io/minimap/)
 
 `mindmap.html` is the whole app: one file, no install, no account, no internet.
 
-Source, and a place to report anything broken: <https://github.com/zurara/minimap>
+The page above: <https://zurara.github.io/minimap/> — and a place to report anything broken:
+<https://github.com/zurara/minimap/issues>
 
 **Open it** by double-clicking. It works offline — everything, including the icons, is inside that
 one file. Nothing is ever sent anywhere.
@@ -37,20 +40,25 @@ usually make here. Nothing in this is required — the app works on its own.
 ### Installing the skills
 
 `SKILL.md` is an open format that around forty agents now read, so the `skills/` folder works
-anywhere — but two tools install it in one command:
+anywhere. The shortest line per tool:
 
 ```bash
-# Claude Code
+# Claude Code — this repo is its own marketplace
 /plugin marketplace add zurara/minimap
 /plugin install minimap@minimap
 
 # Gemini CLI
 gemini extensions install https://github.com/zurara/minimap
+
+# Codex — one directory per skill under ~/.codex/skills
+mkdir -p ~/.codex/skills && git clone https://github.com/zurara/minimap ~/.minimap && ln -s ~/.minimap/skills/* ~/.codex/skills/
+
+# anything else
+git clone https://github.com/zurara/minimap
 ```
 
-Anywhere else: copy `skills/` to wherever that agent keeps skills, or hand it the whole folder
-and point at `AGENTS.md`. Either way the converters in `tools/` come along, which is the part
-the skills actually need.
+However it lands, the converters in `tools/` come along — that is the part the skills actually
+need. Point the agent at `AGENTS.md` and it will find them.
 
 Chrome and Firefox both autosave for a file opened from disk, so double-clicking is enough.
 
@@ -91,3 +99,11 @@ tree with one thumb.
 | **hold** a row | pick it up in Outline (a plain drag scrolls the list) |
 | drag the canvas | pan |
 | pinch | zoom — two fingers also pan |
+
+## License
+
+MIT — see `LICENSE`. Do what you like with it, including selling it; just keep the notice.
+
+Two things in here are not mine: the app's interface icons are
+[RemixIcon](https://remixicon.com) 4.6.0 (Apache-2.0), inlined into `mindmap.html`, and the
+drawings on the project page are [Khushmeen's](https://khushmeen.com/icons.html).

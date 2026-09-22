@@ -1,7 +1,7 @@
 {
   "$schema": "https://code.claude.com/schemas/marketplace.json",
   "name": "minimap",
-  "description": "Minimap — a single-file mindmap tool, and the skills that write maps for it.",
+  "description": "Minimap \u2014 a single-file mindmap tool, and the skills that write maps for it.",
   "owner": {
     "name": "zurara",
     "url": "https://github.com/zurara"
@@ -11,12 +11,21 @@
       "name": "minimap",
       "source": "./",
       "displayName": "Minimap",
-      "description": "Three skills that draft Minimap maps — a field, a decision, a single concept — plus the markdown-to-JSON converters they run. Import the result into the app.",
+      "description": "Three skills that draft Minimap maps \u2014 a field, a decision, a single concept \u2014 plus the markdown-to-JSON converters they run. Import the result into the app.",
       "version": "1.0.0",
-      "author": { "name": "zurara" },
+      "author": {
+        "name": "zurara"
+      },
       "homepage": "https://zurara.github.io/minimap/",
       "category": "productivity",
-      "keywords": ["mindmap", "knowledge-map", "decision", "notes", "local-first"]
+      "keywords": [
+        "mindmap",
+        "knowledge-map",
+        "decision",
+        "notes",
+        "local-first"
+      ],
+      "license": "MIT"
     }
   ]
 }

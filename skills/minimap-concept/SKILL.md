@@ -20,9 +20,10 @@ Paths are relative to the Minimap folder — the one holding the app
 | Existing maps | `maps/*.json` |
 | Graft tool | `tools/graft.py` |
 
-Installed as a plugin there is no such folder: the converters ship with the skill, so every
-`tools/...` path below means `${CLAUDE_PLUGIN_ROOT}/tools/...`, and `maps/` is a folder in the
-working directory — create it if it is not there.
+Installed through an agent there is no such folder. The converters still ship alongside the
+skills, so every `tools/...` path below means `${CLAUDE_PLUGIN_ROOT}/tools/...` in Claude Code,
+and elsewhere `tools/` resolved from this file's own location — `../../tools/`. `maps/` is then
+a folder in the working directory; create it if it is not there.
 
 **Second language.** This skill can run bilingually — giving each term in the user's
 working language and in a second one. Set that second language from what the user actually

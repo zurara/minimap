@@ -22,9 +22,10 @@ Paths are relative to the Minimap folder — the one holding the app
 | Converter | `tools/md2minimap.py` |
 | Scratch markdown | anywhere temporary — it is an intermediate, not a deliverable |
 
-Installed as a plugin there is no such folder: the converters ship with the skill, so every
-`tools/...` path below means `${CLAUDE_PLUGIN_ROOT}/tools/...`, and `maps/` is a folder in the
-working directory — create it if it is not there.
+Installed through an agent there is no such folder. The converters still ship alongside the
+skills, so every `tools/...` path below means `${CLAUDE_PLUGIN_ROOT}/tools/...` in Claude Code,
+and elsewhere `tools/` resolved from this file's own location — `../../tools/`. `maps/` is then
+a folder in the working directory; create it if it is not there.
 
 If a sibling skill in this environment writes maps into a notes vault instead, that one owns
 the vault and this one owns `maps/`. Never write to both from one invocation.
