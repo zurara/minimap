@@ -5,7 +5,7 @@
 `mindmap.html` is the whole app: one file, no install, no account, no internet.
 
 Project page: <https://zurara.github.io/minimap/>. Anything broken:
-<https://github.com/zurara/minimap/issues>
+<https://github.com/zurara/minimap/issues>. What changed in each version: `CHANGELOG.md`.
 
 **Open it** by double-clicking. It works offline — everything, including the icons, is inside that
 one file. Nothing is ever sent anywhere.
@@ -78,6 +78,8 @@ The map you see on first run explains itself. The short version:
 | `Space` | rename — or just start typing |
 | `⌘Enter` | notes (markdown) |
 | `⌘L` | connect two nodes across branches |
+| `⌘`-click canvas | start a free node |
+| `⌘`-click a link | open it, or jump to a `[[wiki link]]` |
 | `?` | every shortcut |
 
 Drag a node above or below another to reorder it, or onto it to make it a child.
