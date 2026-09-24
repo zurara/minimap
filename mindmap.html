@@ -754,8 +754,11 @@ $('#saved').addEventListener('mouseleave',()=>savedTip(false));
 $('#saved').addEventListener('focus',()=>savedTip(true));
 $('#saved').addEventListener('blur',()=>savedTip(false));
 $('#saved').addEventListener('click',()=>{if(savedState==='off'||savedState==='error')exportJSON();});
+/* ?demo: always open on the Start here map and never read or write storage — the project
+   page embeds the app this way, so its preview never shows (or touches) the visitor's maps */
+const DEMO=/[?&]demo(&|=|$)/.test(location.search);
 function save(){
-  if(!DB.docs.length)return;
+  if(!DB.docs.length||DEMO)return;
   D.updated=Date.now(); D.view={x:view.x,y:view.y,k:view.k};
   if(!STORE_OK){dirtyUnsaved=true;return;}
   setSaved('busy');
@@ -766,7 +769,7 @@ function save(){
 }
 function load(){
   let raw=null;
-  try{raw=localStorage.getItem(KEY);}catch(e){}
+  if(!DEMO)try{raw=localStorage.getItem(KEY);}catch(e){}
   if(raw){
     try{DB=JSON.parse(raw);}
     catch(e){
@@ -2711,7 +2714,7 @@ addEventListener('resize',()=>{
 addEventListener('orientationchange',()=>{setTimeout(()=>{if(mode==='map'&&!editing)(NARROW?fitMobile:fit)();},350);});
 let dirtyUnsaved=false;
 window.addEventListener('beforeunload',e=>{
-  if(!DB.docs.length)return;
+  if(!DB.docs.length||DEMO)return;
   if(!STORE_OK){
     if(dirtyUnsaved){e.preventDefault();e.returnValue='';return '';}
     return;
@@ -2719,7 +2722,7 @@ window.addEventListener('beforeunload',e=>{
   try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e2){}
 });
 window.addEventListener('storage',e=>{
-  if(e.key===KEY&&e.newValue!==JSON.stringify(DB))
+  if(!DEMO&&e.key===KEY&&e.newValue!==JSON.stringify(DB))
     toast('This map was also changed in another tab \u2014 reload before editing further');
 });
 </script>
