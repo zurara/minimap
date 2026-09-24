@@ -1,7 +1,7 @@
 {
   "name": "minimap",
   "displayName": "Minimap",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Draft a Minimap map with an agent: map a field, weigh a decision, or explain one concept, then import the JSON into the app.",
   "author": {
     "name": "zurara",

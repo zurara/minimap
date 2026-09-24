@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.0.2 — 2026-09-24
+
+### Search
+
+- ⌘K search sits at the bottom centre of the screen, with results above the input.
+- Search finds free nodes and their children too.
+- When you type something, the first row is always **Create "…"**. It makes a free node with
+  that title in the middle of the view. The highlight starts on the best match, so Enter still
+  jumps; press ↑ to reach Create.
+
+### Connections
+
+- When you finish connecting, the source node stays selected, its detail panel opens, and the
+  cursor is in the new connection's label field.
+- ⌘-click (or ⌘Enter) while connecting links that node and keeps you connecting, so you can link
+  several nodes in one go. A plain click or Enter links the last one; Esc finishes and keeps
+  every link made.
+- Start typing while connecting to search for the target. **Create and connect "…"** makes a free
+  node beside the source and links it.
+- The "Pick a target" hint stays on screen for as long as you are connecting.
+
 ## 1.0.1 — 2026-09-24
 
 ### Notes

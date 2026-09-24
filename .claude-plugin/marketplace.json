@@ -12,7 +12,7 @@
       "source": "./",
       "displayName": "Minimap",
       "description": "Three skills that draft Minimap maps \u2014 a field, a decision, a single concept \u2014 plus the markdown-to-JSON converters they run. Import the result into the app.",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "zurara"
       },

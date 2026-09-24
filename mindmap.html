@@ -301,16 +301,19 @@ html.cmd .node .note a[href]{cursor:pointer;color:var(--ink);text-decoration-col
 /* ---------- palette / toast ---------- */
 #scrim{position:absolute;inset:0;background:rgba(0,0,0,.18);z-index:70;display:none}
 #scrim.on{display:block}
-#pal{position:absolute;top:14vh;left:50%;transform:translateX(-50%);width:min(560px,92vw);z-index:80;
-  background:var(--panel);border:1px solid var(--rule-2);border-radius:12px;box-shadow:var(--shadow);display:none;overflow:hidden}
-#pal.on{display:block}
-#pal input{width:100%;border:0;outline:0;background:none;padding:14px 16px;font-size:15px;border-bottom:1px solid var(--rule)}
-#pal .res{max-height:46vh;overflow:auto;padding:5px}
+#pal{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);width:min(560px,92vw);z-index:80;
+  background:var(--panel);border:1px solid var(--rule-2);border-radius:12px;box-shadow:var(--shadow);display:none;overflow:hidden;flex-direction:column}
+#pal.on{display:flex}
+#pal input{order:3;width:100%;border:0;outline:0;background:none;padding:14px 16px;font-size:15px;border-top:1px solid var(--rule)}
+#pal .res:empty{display:none}
+#pal .it.new .n{color:inherit}
+#pal .it.new .n b{font-weight:500}
+#pal .res{order:1;max-height:46vh;overflow:auto;padding:5px}
 #pal .it{display:flex;gap:9px;align-items:baseline;padding:8px 10px;border-radius:7px;cursor:pointer}
 #pal .it.a{background:var(--accent);color:var(--accent-ink)}
 #pal .it .p{font:10px var(--sans);opacity:.6;flex:0 0 auto}
 #pal .it .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#pal .hint{padding:8px 14px;border-top:1px solid var(--rule);font:10px var(--sans);color:var(--ink-3)}
+#pal .hint{order:2;padding:8px 14px;border-top:1px solid var(--rule);font:10px var(--sans);color:var(--ink-3)}
 #toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
   background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:20px;font-size:12.5px;
   pointer-events:none;transition:.2s;z-index:90}
@@ -438,7 +441,7 @@ html.touch #i-note,html.touch .strow input,html.touch .lnk .lbl{font-size:16px}
   #insp header .btn{height:36px;width:36px;justify-content:center;padding:0}
   #insp .body{padding:14px 14px calc(24px + env(safe-area-inset-bottom))}
   #i-note{max-height:none}
-  #pal{top:8vh;width:calc(100vw - 16px)}
+  #pal{bottom:calc(8px + env(safe-area-inset-bottom));width:calc(100vw - 16px)}
   #pal .res{max-height:52vh}
   #help{padding:0;align-items:stretch}
   #help .card{max-height:none;height:100%;border-radius:0;border:0;
@@ -685,7 +688,8 @@ function linkedSet(){
 function deselect(){
   if(!sel)return;
   if(editing)commitEdit();
-  sel=null;linkMode=null;
+  if(linkMode){linkMode=null;$('#toast').classList.remove('on');}
+  sel=null;
   if(inspOpen())closeInspector();
   render();
 }
@@ -855,8 +859,10 @@ function md(src){
   return out.join('');
 }
 let toastT=null;
+/* while linking, the pick-a-target hint stays up; other toasts show briefly, then hand back to it */
+const linkHint=()=>TOUCH?'Now tap the node to connect to':'Pick a target: click it, type to search, ⌘-click for several · Esc when done';
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');
-  clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),1600);}
+  clearTimeout(toastT);toastT=setTimeout(()=>{if(linkMode)e.textContent=linkHint();else e.classList.remove('on');},1600);}
 
 /* ---------- view ---------- */
 const world=$('#world'), edges=$('#edges'), edgesTop=$('#edgesTop'), stage=$('#stage');
@@ -1138,7 +1144,7 @@ stage.addEventListener('pointerdown',e=>{
     drag={pan:true,x:e.clientX,y:e.clientY,vx:view.x,vy:view.y};
     stage.classList.add('panning');try{stage.setPointerCapture(e.pointerId);}catch(err){}
     hideChrome();
-    if(linkMode){linkMode=null;render();toast('Cancelled');}
+    if(linkMode)endLink();
     else deselect();
     return;
   }
@@ -1151,7 +1157,7 @@ stage.addEventListener('pointerdown',e=>{
   const ne=e.target.closest('.node');
   if(!ne)return;
   const id=ne.dataset.id;
-  if(linkMode){e.preventDefault();finishLink(id);return;}
+  if(linkMode){e.preventDefault();finishLink(id,e.metaKey||e.ctrlKey);return;}
   if(editing===id)return;
   if(editing)commitEdit();
   const wasSel=(sel===id),onTitle=!!e.target.closest('.t');
@@ -1435,16 +1441,31 @@ function delStatus(sid){
 /* ---------- cross connections ---------- */
 function startLink(){
   if(!sel)return;
-  linkMode={from:sel};
-  toast(TOUCH?'Now tap the node to connect to':'Pick the target node — click it, or arrow keys then Enter · Esc cancels');
+  if(editing)commitEdit();
+  linkMode={from:sel,added:[]};
   render();
+  const e=$('#toast');e.textContent=linkHint();e.classList.add('on');clearTimeout(toastT);
 }
-function finishLink(to){
-  const from=linkMode.from;linkMode=null;
-  if(!to||to===from){render();return toast('Connection cancelled');}
-  if(D.links.some(l=>(l.from===from&&l.to===to)||(l.from===to&&l.to===from))){render();return toast('Already connected');}
-  snap();D.links.push({id:uid(),from:from,to:to,label:''});
-  sel=to;render();save();toast('Connected');
+/* keep=true (⌘ held) connects and stays in link mode so several targets can be picked in one go */
+function finishLink(to,keep){
+  const from=linkMode.from;
+  if(!to||to===from){if(keep)return toast('Pick another node');return endLink();}
+  if(D.links.some(l=>(l.from===from&&l.to===to)||(l.from===to&&l.to===from))){
+    toast('Already connected');if(!keep)endLink();return;}
+  snap();const l={id:uid(),from:from,to:to,label:''};D.links.push(l);linkMode.added.push(l.id);save();
+  if(keep){sel=from;render();toast('Connected '+linkMode.added.length+' · keep picking, Esc when done');return;}
+  endLink();
+}
+/* leave link mode; if anything was connected, open the source's panel on the newest connection's label */
+function endLink(){
+  const m=linkMode;linkMode=null;if(!m)return;
+  if(!m.added.length){render();return toast('Cancelled');}
+  sel=m.from;render();
+  openInspector();
+  const lid=m.added[m.added.length-1];
+  const inp=document.querySelector('#i-links .lnk[data-lid="'+lid+'"] .lbl');
+  if(inp){inp.focus();inp.scrollIntoView({block:'nearest'});}
+  toast(m.added.length>1?'Connected '+m.added.length+' nodes':'Connected');
 }
 function delLink(lid){snap();D.links=D.links.filter(l=>l.id!==lid);render();save();}
 
@@ -1611,7 +1632,7 @@ function olNode(id,depth){
   row.appendChild(car);row.appendChild(bul);row.appendChild(tw);
   row.addEventListener('pointerdown',ev=>{
     if(ev.target.closest('.xl')||ev.target.closest('.caret')||ev.target.closest('[data-st]'))return;
-    if(linkMode){ev.preventDefault();finishLink(id);return;}
+    if(linkMode){ev.preventDefault();finishLink(id,ev.metaKey||ev.ctrlKey);return;}
     if(editing===id)return;
     if(editing)commitEdit();
     const wasSel=(sel===id),onTitle=!!ev.target.closest('.t');
@@ -1729,7 +1750,7 @@ function renderInspector(){
     +(TOUCH?'Tap Link on the bar below, then tap a node.':'Press ⌘L, then pick a node.')+'</div>';
   ls.forEach(l=>{
     const other=l.from===sel?l.to:l.from;
-    const d=document.createElement('div');d.className='lnk';
+    const d=document.createElement('div');d.className='lnk';d.dataset.lid=l.id;
     const top=document.createElement('div');top.className='top';
 
     const dir=document.createElement('button');dir.className='dir';
@@ -2077,10 +2098,11 @@ document.addEventListener('keydown',e=>{
   if(editing)return;
   if(meta){
     const k=e.key.toLowerCase();
+    if(linkMode&&k==='enter'){e.preventDefault();finishLink(sel,true);return;}
     if(k==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
     if(k==='y'){e.preventDefault();redo();return;}
     if(k==='s'){e.preventDefault();exportJSON();return;}
-    if(k==='k'){e.preventDefault();openPal();return;}
+    if(k==='k'){e.preventDefault();openPal('');return;}
     if(k==='l'){e.preventDefault();if(e.shiftKey)cycleTheme();else startLink();return;}
     if(k==='/'){e.preventDefault();setMode(mode==='map'?'outline':'map');return;}
     if(k==='enter'){e.preventDefault();openInspector(true);return;}
@@ -2096,7 +2118,7 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(e.key==='Escape'){
-    if(linkMode){linkMode=null;render();toast('Cancelled');return;}
+    if(linkMode){endLink();return;}
     if(inspOpen()){closeInspector();return;}
     if($$('.menu.open').length){closeMenus();return;}
     deselect();
@@ -2129,49 +2151,94 @@ document.addEventListener('keydown',e=>{
     }
     nav(d);return;
   }
-  if(e.key.length===1&&!e.altKey){e.preventDefault();if(sel)startEdit(sel,e.key);}
+  if(e.key.length===1&&!e.altKey){e.preventDefault();if(linkMode)openPal(e.key.trim());else if(sel)startEdit(sel,e.key);}
 });
 
 /* ---------- command palette ---------- */
-let palIdx=0,palHits=[];
+let palIdx=0,palHits=[],palQ="";
 const palOn=()=>$('#pal').classList.contains('on');
-function openPal(){
+/* while linking, the palette picks connection targets instead of jumping */
+function openPal(seed){
   $('#pal').classList.add('on');$('#scrim').classList.add('on');
-  $('#palIn').value='';palFilter('');$('#palIn').focus();
+  $('#pal').classList.toggle('link',!!linkMode);
+  $('#palIn').placeholder=linkMode?'Connect to…':'Search nodes…';
+  $('#pal .hint').textContent=linkMode
+    ?'↑↓ move · ↵ connect · ⌘↵ connect and keep going · esc close'
+    :'↑↓ move · ↵ jump · esc close';
+  const v=typeof seed==='string'?seed:'';
+  $('#palIn').value=v;palFilter(v);$('#palIn').focus();
 }
 function closePal(){$('#pal').classList.remove('on');$('#scrim').classList.remove('on');}
 function palFilter(q){
   q=q.trim().toLowerCase();
   const all=[];
-  (function w(id,path){const n=N(id);all.push({id:id,t:n.title||'untitled',p:path,note:n.note||''});
+  const w=(function w(id,path){const n=N(id);all.push({id:id,t:n.title||'untitled',p:path,note:n.note||''});
     const np=path?path+' / '+(n.title||'untitled'):(n.title||'untitled');
-    for(const c of n.children)w(c,np);})(D.root,'');
-  palHits=(q?all.filter(a=>(a.t+' '+a.note).toLowerCase().indexOf(q)>=0):all).slice(0,60);
-  palIdx=0;palDraw();
+    for(const c of n.children)w(c,np);});
+  w(D.root,'');(D.free||[]).forEach(fr=>w(fr,'free'));
+  const skip={};
+  if(linkMode){skip[linkMode.from]=1;linksOf(linkMode.from).forEach(l=>{skip[l.from]=1;skip[l.to]=1;});}
+  palQ=q;palHits=(q?all.filter(a=>(a.t+' '+a.note).toLowerCase().indexOf(q)>=0):all).filter(a=>!skip[a.id]).slice(0,60);
+  /* a query always offers "Create …" as the first row; the highlight starts on the best match */
+  if(q)palHits.unshift({create:true});
+  palIdx=q&&palHits.length>1?1:0;palDraw();
 }
 function palDraw(){
   const r=$('#palRes');r.innerHTML='';
   palHits.forEach((h,i)=>{
     const d=document.createElement('div');d.className='it'+(i===palIdx?' a':'');
+    if(h.create){
+      d.className+=' new';
+      d.innerHTML='<span class="n">'+(linkMode?'Create and connect':'Create')+' <b></b></span><span class="p">free node</span>';
+      d.querySelector('b').textContent='“'+$('#palIn').value.trim()+'”';
+      d.onclick=ev=>palCreate(ev.metaKey||ev.ctrlKey);r.appendChild(d);return;
+    }
     d.innerHTML='<span class="n"></span><span class="p"></span>';
     d.querySelector('.n').textContent=h.t;
     d.querySelector('.p').textContent=h.p;
-    d.onclick=()=>palGo(i);
+    d.onclick=ev=>palGo(i,ev.metaKey||ev.ctrlKey);
     r.appendChild(d);
   });
   const a=r.children[palIdx];if(a)a.scrollIntoView({block:'nearest'});
 }
-function palGo(i){
+function palGo(i,keep){
   const h=palHits[i];if(!h)return;
+  if(h.create){palCreate(keep);return;}
+  if(linkMode){palLink(h.id,keep);return;}
   closePal();
   ancestors(h.id).forEach(x=>N(x).collapsed=false);
   reindex();select(h.id);if(mode==='map')centerOn(h.id,true);
+}
+function palLink(id,keep){
+  if(keep){finishLink(id,true);$('#palIn').value='';palFilter('');$('#palIn').focus();return;}
+  closePal();finishLink(id,false);
+}
+/* no match: drop a free node with the query as its title — at the middle of the view,
+   or beside the source node when linking — and connect it if linking */
+function palCreate(keep){
+  const t=$('#palIn').value.trim();if(!t)return;
+  if(editing)commitEdit();
+  if(mode!=='map')setMode('map');
+  const r=stage.getBoundingClientRect(),src=linkMode&&pos[linkMode.from];
+  const x=src?src.x+sizes[linkMode.from].w+60:(r.width/2-view.x)/view.k-30;
+  let y=src?src.y+sizes[linkMode.from].h+24:((r.height-tbarH())/2-view.y)/view.k-14;
+  /* step down past anything already drawn there */
+  const hit=()=>Object.keys(pos).some(k=>{const p=pos[k],z=sizes[k];return z&&x<p.x+z.w+12&&x+140>p.x-12&&y<p.y+z.h+12&&y+28>p.y-12;});
+  for(let i=0;i<40&&hit();i++)y+=20;
+  snap();
+  const id=uid();
+  D.nodes[id]={id:id,title:t,note:'',children:[],collapsed:false,color:null,side:null,status:null,free:{x:x,y:y,a:null}};
+  (D.free=D.free||[]).push(id);
+  reindex();
+  if(linkMode){render();palLink(id,keep);return;}
+  closePal();sel=id;render();save();toast('Free node created');
 }
 function palKey(e){
   if(e.key==='Escape'){e.preventDefault();closePal();return;}
   if(e.key==='ArrowDown'){e.preventDefault();palIdx=Math.min(palIdx+1,palHits.length-1);palDraw();return;}
   if(e.key==='ArrowUp'){e.preventDefault();palIdx=Math.max(palIdx-1,0);palDraw();return;}
-  if(e.key==='Enter'){e.preventDefault();palGo(palIdx);return;}
+  if(e.key==='Enter'){e.preventDefault();const keep=!!linkMode&&(e.metaKey||e.ctrlKey);
+    palGo(palIdx,keep);return;}
 }
 $('#palIn').addEventListener('input',e=>palFilter(e.target.value));
 $('#scrim').addEventListener('click',()=>{closePal();$('#help').classList.remove('on');$('#scrim').classList.remove('on');});
@@ -2424,7 +2491,7 @@ function showHelp(){
       ['Space / F2','Rename'],['click again','Edit the title where you click'],['type anything','Replace title'],['\u232b','Delete node + branch']]],
     ['Move',[['\u2191 \u2193 \u2190 \u2192','Move selection'],['\u2325\u2191 \u2325\u2193','Reorder among siblings'],
       ['\u2325\u2192','Indent (demote)'],['\u2325\u2190 / \u21e7Tab','Outdent (promote)'],['drag a node','Drop above/below to reorder'],['','Drop on a node to make it a child']]],
-    ['Detail',[['double-click','Open the detail panel'],['click the tag','Cycle a node’s status'],['\u23181…\u23189','Set status 1–9 (again clears)'],['\u2318Enter','Open note / detail panel'],['\u2318L','Connect to another node'],['\u2318click canvas','New free node (follows the first node you connect it to)'],
+    ['Detail',[['double-click','Open the detail panel'],['click the tag','Cycle a node’s status'],['\u23181…\u23189','Set status 1–9 (again clears)'],['\u2318Enter','Open note / detail panel'],['\u2318L','Connect to another node'],['\u2318click / \u2318Enter','While connecting: connect and keep picking'],['type while connecting','Search for the target, or create a free node'],['\u2318click canvas','New free node (follows the first node you connect it to)'],
       ['\u2318.','Fold / unfold'],['\u2318K','Search & jump']]],
     ['View',[['\u21e7\u2318L','Theme: auto / light / dark'],['\u2318/','Map \u2194 Outline'],['\u23180','Fit'],['\u2318= \u2318\u2212','Zoom'],
       ['scroll','Pan \u00b7 \u2318scroll zoom'],['double-click bg','Fit']]],
@@ -2587,7 +2654,7 @@ let tbSig=null;
 function syncTbar(force){
   if(!D||!document.documentElement.classList.contains('touch-ui')){tbSig=null;return;}
   const n=sel&&D.nodes[sel]?N(sel):null;
-  const sig=[mode,sel,editing,linkMode,hist.length,fut.length,
+  const sig=[mode,sel,editing,linkMode?linkMode.added.length:-1,hist.length,fut.length,
              n?n.children.length:0,n&&n.collapsed?1:0].join('|');
   if(!force&&sig===tbSig)return;
   tbSig=sig;
@@ -2597,7 +2664,7 @@ function syncTbar(force){
   if(linkMode){
     TBS.classList.add('center');
     add(tbBtn('xlink','Pick target',()=>toast('Tap the node to connect to'),{cls:'go'}));
-    add(tbBtn('close','Cancel',()=>{linkMode=null;render();toast('Cancelled');},{cls:'warn'}));
+    add(tbBtn('close',linkMode.added.length?'Done':'Cancel',()=>endLink(),{cls:linkMode.added.length?'go':'warn'}));
   }else if(editing){
     /* Mid-title, the two keys you cannot press are the two that matter most. */
     TBS.classList.add('center');
