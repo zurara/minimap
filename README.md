@@ -57,6 +57,10 @@ mkdir -p ~/.codex/skills && git clone https://github.com/zurara/minimap ~/.minim
 git clone https://github.com/zurara/minimap
 ```
 
+To update later: in Claude Code, `/plugin marketplace update minimap`; in Gemini CLI,
+`gemini extensions update minimap`; for Codex, `git -C ~/.minimap pull`; for a plain clone,
+`git pull` inside it.
+
 However it lands, the converters in `tools/` come along — that is the part the skills actually
 need. Point the agent at `AGENTS.md` and it will find them.
 

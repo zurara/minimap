@@ -624,9 +624,12 @@ function starterDoc(){
   const g=mk('Press ? for every shortcut',null,'todo','left');
   nodes[root].children=[a,b,c,e,f,g];
   nodes[a].children=[a1];
+  /* a free node, sitting under the node it follows (x,y are its offset from that node) */
+  const h=mk('\u2318-click canvas: a free node','A node outside the tree. Connect it to a node and it **follows** that node and folds with it; drop it **on** a node to make it a child.');
+  nodes[h].free={x:40,y:84,a:f};
   return {id:uid(),name:'Start here',created:Date.now(),updated:Date.now(),root:root,nodes:nodes,
-    statuses:JSON.parse(JSON.stringify(DEF_STATUS)),
-    links:[{id:uid(),from:e,to:g,label:'more'}],view:null};
+    statuses:JSON.parse(JSON.stringify(DEF_STATUS)),free:[h],
+    links:[{id:uid(),from:e,to:g,label:'more'},{id:uid(),from:h,to:f,label:'follows'}],view:null};
 }
 const N=id=>D.nodes[id];
 const ST=id=>id?(D.statuses||[]).find(s=>s.id===id)||null:null;

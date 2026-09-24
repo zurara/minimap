@@ -27,6 +27,7 @@
 - Free nodes: ⌘-click an empty spot on the canvas to start one. Connected to a node in the main
   tree, it follows that node and folds with it. Drag it anywhere; drop it on a tree node to make
   it a normal child.
+- The **Start here** map now includes a free node, so first-time visitors see one.
 
 ### Fixed
 
