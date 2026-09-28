@@ -740,12 +740,16 @@ function deselect(){
   if(inspOpen())closeInspector();
   render();
 }
+/* hubs are the centres branches grow out of on both sides: the central node and every free root */
+const hub=id=>id===D.root||isFree(id);
 function sideOf(id){
-  if(id===D.root)return 0;
+  if(hub(id))return 0;
   let cur=id,p=P[cur];
-  while(p&&p!==D.root){cur=p;p=P[cur];}
+  while(p&&!hub(p)){cur=p;p=P[cur];}
   return N(cur).side==='left'?-1:1;
 }
+/* the side a new top branch of hub h goes on: whichever has fewer (ignoring id itself) */
+function freerSide(h,id){const k=N(h).children.filter(c=>c!==id),L=k.filter(c=>N(c).side==='left').length;return L<k.length-L?'left':'right';}
 
 /* ---------- history ---------- */
 function state(){return JSON.stringify({nodes:D.nodes,links:D.links,root:D.root,statuses:D.statuses,free:D.free||[]});}
@@ -1278,9 +1282,11 @@ function layout(){
     const b=f.a?baseOf(f.a):{x:0,y:0},w=sizes[fr].w,hh=sizes[fr].h;
     pos[fr]={x:b.x+f.x,y:b.y+f.y};
     const n=N(fr);if(n.collapsed||!n.children.length)continue;
-    let tot=0;n.children.forEach((c,i)=>{tot+=H[c];if(i)tot+=GY;});
-    let yy=pos[fr].y+hh/2-tot/2;
-    for(const c of n.children){place(c,pos[fr].x+w+GX,yy,1);yy+=H[c]+GY;}
+    /* like the central node: branches marked left grow leftwards, the rest to the right */
+    const cy=pos[fr].y+hh/2;
+    [[n.children.filter(c=>N(c).side!=='left'),pos[fr].x+w+GX,1],[n.children.filter(c=>N(c).side==='left'),pos[fr].x-GX,-1]]
+      .forEach(([ks,ex,dir])=>{let tot=0;ks.forEach((c,i)=>{tot+=H[c];if(i)tot+=GY;});
+        let yy=cy-tot/2;for(const c of ks){place(c,ex,yy,dir);yy+=H[c]+GY;}});
   }
 }
 function anchorPt(id,dir){const p=pos[id],s=sizes[id];return dir>0?{x:p.x+s.w,y:p.y+s.h/2}:{x:p.x,y:p.y+s.h/2};}
@@ -1526,11 +1532,7 @@ function addNode(parent,index,seedTitle){
   snap();
   const id=uid();
   D.nodes[id]={id:id,title:seedTitle||'',note:'',children:[],collapsed:false,color:null,side:null,status:null};
-  if(parent===D.root){
-    const kids=N(D.root).children;
-    const L=kids.filter(c=>N(c).side==='left').length,R=kids.length-L;
-    D.nodes[id].side=L<R?'left':'right';
-  }
+  if(hub(parent))D.nodes[id].side=freerSide(parent,id);
   const p=N(parent);
   if(p.collapsed)p.collapsed=false;
   if(index==null)p.children.push(id);else p.children.splice(index,0,id);
@@ -1577,7 +1579,7 @@ function moveNode(id,np,index){
   if(np===id||descendants(id).indexOf(np)>=0)return toast('Cannot drop into its own branch');
   if(isFree(id)){snap();detach(id);if(N(np).collapsed)N(np).collapsed=false;
     const k=N(np).children;k.splice(Math.max(0,Math.min(index,k.length)),0,id);
-    if(np===D.root){const L=k.filter(c=>N(c).side==='left').length;N(id).side=L<k.length-L?'left':'right';}
+    if(hub(np))N(id).side=freerSide(np,id);
     reindex();render();save();return;}
   const op=parentOf(id),ok=N(op).children,oi=ok.indexOf(id);
   if(op===np){
@@ -1591,17 +1593,14 @@ function moveNode(id,np,index){
     const k=N(np).children;
     k.splice(Math.max(0,Math.min(index,k.length)),0,id);
   }
-  if(np===D.root&&N(id).side!=='left'&&N(id).side!=='right'){
-    const kids=N(D.root).children,L=kids.filter(c=>N(c).side==='left').length;
-    N(id).side=L<kids.length-L?'left':'right';
-  }
+  if(hub(np)&&N(id).side!=='left'&&N(id).side!=='right')N(id).side=freerSide(np,id);
   reindex();render();save();
 }
 function dropRelative(id,target,after){
   if(target===D.root)return moveNode(id,D.root,N(D.root).children.length);
   if(isFree(target))return reparent(id,target);
   const p=parentOf(target);
-  if(p===D.root)N(id).side=N(target).side||'right';
+  if(hub(p))N(id).side=N(target).side||'right';
   moveNode(id,p,N(p).children.indexOf(target)+(after?1:0));
 }
 function reparent(id,np){
@@ -1613,8 +1612,7 @@ function reparent(id,np){
   detach(id);
   if(N(np).collapsed)N(np).collapsed=false;
   N(np).children.push(id);
-  if(np===D.root){const kids=N(D.root).children,L=kids.filter(c=>N(c).side==='left').length;
-    N(id).side=L<kids.length-L?'left':'right';}
+  if(hub(np))N(id).side=freerSide(np,id);
   reindex();render();save();
 }
 function toggleFold(id){
@@ -1645,8 +1643,7 @@ function outdent(id){
   snap();
   N(p).children.splice(N(p).children.indexOf(id),1);
   N(gp).children.splice(N(gp).children.indexOf(p)+1,0,id);
-  if(gp===D.root){const kids=N(D.root).children,L=kids.filter(c=>N(c).side==='left').length;
-    N(id).side=N(p).side||(L<kids.length-L?'left':'right');}
+  if(hub(gp))N(id).side=N(p).side||freerSide(gp,id);
   reindex();render();save();
 }
 function setColor(id,c){snap();N(id).color=c;render();save();}
@@ -2317,8 +2314,8 @@ function nav(dir){
   }
   if(dir==='left'||dir==='right'){
     const n=N(sel);
-    if(sel===D.root){
-      const kids=N(D.root).children.filter(c=>dir==='right'?N(c).side!=='left':N(c).side==='left');
+    if(hub(sel)){
+      const kids=N(sel).children.filter(c=>dir==='right'?N(c).side!=='left':N(c).side==='left');
       if(kids.length)select(kids[Math.floor((kids.length-1)/2)]);
       return;
     }

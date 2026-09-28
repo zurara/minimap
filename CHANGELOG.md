@@ -33,6 +33,9 @@
 
 - The level slider now folds and unfolds every central node together — free nodes included —
   instead of only the main tree.
+- Free nodes grow branches on both sides, like the central node: a new child goes on the side
+  with fewer branches, and dropping a branch beside a sibling on the other side moves it there.
+  Children that free nodes already have stay on the right.
 
 ## 1.0.2 — 2026-09-24
 
