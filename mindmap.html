@@ -137,6 +137,16 @@ kbd{font:11px/1 var(--sans);letter-spacing:.02em;border:1px solid var(--rule-2);
 .olfree{margin:14px 0 4px;font:10px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
 .node .note{margin-top:3px;font:12px/1.4 var(--sans);color:var(--ink-2);overflow-wrap:anywhere}
 .node .note *{margin:0;font-size:12px}
+.node .imgs{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.node .imgs:empty{display:none}
+.imgs.ol{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px}
+.imgs.ol .th{width:40px;height:40px}
+.th{position:relative;flex:0 0 auto;width:54px;height:54px;border-radius:5px;overflow:hidden;background:var(--rule);cursor:zoom-in}
+.th img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none;user-select:none}
+.th.miss::after{content:'?';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font:12px var(--sans)}
+.th .more{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.48);color:#fff;font:600 13px/1 var(--sans)}
+.node.imgdrop{border-color:var(--ring);box-shadow:0 0 0 3px var(--ring)}
 .node .badges{display:flex;gap:5px;align-items:center;margin-top:3px;font:10px var(--sans);color:var(--ink-3)}
 .node .badges span{display:inline-flex;align-items:center;gap:3px}
 #ins{position:absolute;left:0;top:0;height:2px;z-index:6;background:var(--ring);border-radius:2px;
@@ -297,6 +307,27 @@ html.cmd .node .note a[href]{cursor:pointer;color:var(--ink);text-decoration-col
 .lnk .lbl:hover{box-shadow:inset 0 0 0 1px var(--rule-2)}
 .lnk .lbl:focus{color:var(--ink);background:var(--paper);box-shadow:inset 0 0 0 1px var(--rule-2)}
 .empty{color:var(--ink-3);font-size:12.5px;padding:2px 0}
+#i-imgs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#i-imgs .th{width:auto;height:auto;aspect-ratio:1}
+#i-imgs .x{position:absolute;top:3px;right:3px;display:flex;padding:2px;border-radius:5px;background:var(--panel);
+  color:var(--ink-2);opacity:0;transition:opacity .12s;cursor:pointer}
+#i-imgs .th:hover .x,#i-imgs .x:focus{opacity:1}
+#i-imgs .x:hover{color:var(--ink)}
+#i-imgs+.empty{margin-top:0}
+/* lightbox: full image, arrows between a node's images */
+#lb{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(10,10,10,.86)}
+#lb.on{display:flex}
+#lb img{max-width:calc(100vw - 128px);max-height:calc(100vh - 96px);object-fit:contain;border-radius:4px;
+  box-shadow:0 10px 40px rgba(0,0,0,.4);background:#fff}
+#lb button{position:absolute;display:flex;align-items:center;justify-content:center;width:40px;height:40px;
+  border-radius:50%;color:#fff;background:rgba(255,255,255,.08)}
+#lb button:hover{background:rgba(255,255,255,.2)}
+#lb button[hidden]{display:none}
+#lbX{top:14px;right:14px}#lbDel{top:14px;right:62px}#lbPrev{left:16px;top:50%;margin-top:-20px}#lbNext{right:16px;top:50%;margin-top:-20px}
+#lbCap{position:absolute;left:0;right:0;bottom:18px;text-align:center;color:rgba(255,255,255,.75);font:12px var(--sans);
+  padding:0 60px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){#lb img{max-width:100vw;max-height:calc(100vh - 120px);border-radius:0}
+  #lbPrev,#lbNext{top:auto;bottom:44px;margin-top:0}}
 
 /* ---------- palette / toast ---------- */
 #scrim{position:absolute;inset:0;background:rgba(0,0,0,.18);z-index:70;display:none}
@@ -549,6 +580,8 @@ html.touch-ui #insp{bottom:0;z-index:30}
           <div id="i-ph">Markdown supported.<br><br>**bold** *italic* `code` ==highlight==<br>- lists, &gt; quotes, # headings<br>[link](https://…) and [[Another node]]</div>
         </div>
         <div id="i-prev" class="md"></div>
+        <div class="sec">Images <span class="sp"></span><button class="btn" id="addImg" style="height:22px;font-size:12px;padding:0 6px"><svg class="i s"><use href="#ri-img"/></svg>Add</button></div>
+        <div id="i-imgs"></div>
         <div class="sec">Connections <span class="sp"></span><button class="btn" id="addLink" style="height:22px;font-size:12px;padding:0 6px"><svg class="i s"><use href="#ri-link"/></svg>Add<span class="kk"> ⌘L</span></button></div>
         <div id="i-links"></div>
       </div>
@@ -562,6 +595,12 @@ html.touch-ui #insp{bottom:0;z-index:30}
   </div>
 </div>
 <input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+<input type="file" id="imgIn" accept="image/*" multiple style="display:none">
+<div id="lb" role="dialog" aria-label="Image preview"><img id="lbImg" alt=""><div id="lbCap"></div>
+  <button id="lbPrev" title="Previous (←)"><svg class="i"><use href="#ri-left"/></svg></button>
+  <button id="lbNext" title="Next (→)"><svg class="i"><use href="#ri-right"/></svg></button>
+  <button id="lbDel" title="Remove this image (Delete)"><svg class="i"><use href="#ri-del"/></svg></button>
+  <button id="lbX" title="Close (Esc)"><svg class="i"><use href="#ri-close"/></svg></button></div>
 <script>
 "use strict";
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -794,7 +833,9 @@ function normalize(d){
   const have={};d.statuses.forEach(x=>have[x.id]=1);
   for(const id in d.nodes){const n=d.nodes[id];n.children=(n.children||[]).filter(c=>d.nodes[c]);
     n.note=n.note||'';n.color=toAccent(n.color);n.title=n.title||'';
-    n.status=n.status&&have[n.status]?n.status:null;}
+    n.status=n.status&&have[n.status]?n.status:null;
+    if(Array.isArray(n.images))n.images=n.images.filter(a=>typeof a==='string'&&a);
+    if(!n.images||!n.images.length)delete n.images;}
   d.links=d.links.filter(l=>d.nodes[l.from]&&d.nodes[l.to]);
   d.free=(Array.isArray(d.free)?d.free:[]).filter(id=>d.nodes[id]);
   d.free.forEach(id=>{const f=d.nodes[id].free||{};d.nodes[id].free={x:+f.x||0,y:+f.y||0,a:f.a&&d.nodes[f.a]?f.a:null};});
@@ -807,6 +848,171 @@ function openDoc(id){
   save();
 }
 function syncDoc(){$('#docname').value=D.name;document.title=D.name+' · Mindmap';}
+
+/* ---------- images ----------
+   A node lists its images by id: node.images=['<id>',…]. The bytes never go into the map itself:
+   they live in IndexedDB (one store for every map, keyed by a hash of the bytes, so the same image
+   pasted twice is stored once), because local storage is ~5MB for all maps together. Exported JSON
+   carries them inline, as assets:{id:{type,data:'data:…'}}, so one file is still the whole map;
+   import moves them back into IndexedDB. Without IndexedDB (a preview, ?demo) they stay in memory. */
+const MAXPX=1600, THUMBS=4;
+const MEM={}, URLS={}, PEND={};
+let IDBP=null;
+function idb(){
+  if(IDBP)return IDBP;
+  IDBP=new Promise(res=>{
+    if(DEMO||!window.indexedDB)return res(null);
+    try{const r=indexedDB.open('mindmap.assets',1);
+      r.onupgradeneeded=()=>r.result.createObjectStore('a');
+      r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);r.onblocked=()=>res(null);}
+    catch(e){res(null);}
+  });
+  return IDBP;
+}
+function idbDo(mode,fn){
+  return idb().then(db=>db&&new Promise((res,rej)=>{
+    const tx=db.transaction('a',mode),r=fn(tx.objectStore('a'));
+    tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error);
+  }));
+}
+async function getBlob(id){
+  if(MEM[id])return MEM[id];
+  try{const r=await idbDo('readonly',st=>st.get(id));if(r&&r.blob)return MEM[id]=r.blob;}catch(e){}
+  return null;
+}
+async function putBlob(id,blob){
+  MEM[id]=blob;
+  try{if(await idb()){await idbDo('readwrite',st=>st.put({blob:blob,t:Date.now()},id));return true;}}catch(e){}
+  return false;
+}
+/* object URL for an image, loaded on demand; every <img data-a=id> is filled once it arrives */
+function imgURL(id){
+  if(URLS[id])return URLS[id];
+  if(!PEND[id])PEND[id]=getBlob(id).then(b=>{
+    if(b)URLS[id]=URL.createObjectURL(b);
+    $$('[data-a="'+id+'"]').forEach(el=>{
+      if(!b){el.parentNode.classList.add('miss');return;}
+      el.src=URLS[id];if(el.parentNode.classList)el.parentNode.classList.remove('miss');
+    });
+    if(!b)delete PEND[id];
+  });
+  return '';
+}
+function thumbsHTML(n,max){
+  const im=n.images||[];if(!im.length)return '';
+  const show=max&&im.length>max?im.slice(0,max):im;
+  return show.map((a,i)=>'<div class="th" data-th="'+i+'"><img data-a="'+a+'" alt="" decoding="async" src="'+imgURL(a)+'">'
+    +(max&&i===max-1&&im.length>max?'<span class="more">+'+(im.length-max+1)+'</span>':'')+'</div>').join('');
+}
+const toBlobP=(c,type,q)=>new Promise(r=>c.toBlob(r,type,q));
+/* shrink to MAXPX on the long edge and re-encode (WebP where the browser can write it) */
+async function prepImage(file){
+  const t=file.type||'';
+  if(t==='image/gif'||t==='image/svg+xml')return file.size<=8e6?file:null;   /* keep animation / vectors as they are */
+  let bmp;try{bmp=await createImageBitmap(file);}catch(e){return null;}
+  const k=Math.min(1,MAXPX/Math.max(bmp.width,bmp.height)),w=Math.max(1,Math.round(bmp.width*k)),h=Math.max(1,Math.round(bmp.height*k));
+  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(bmp,0,0,w,h);
+  if(bmp.close)bmp.close();
+  let out=await toBlobP(c,'image/webp',.85);
+  if(!out||out.type!=='image/webp')out=await toBlobP(c,t==='image/png'?'image/png':'image/jpeg',.86);
+  if(!out)return null;
+  if(k===1&&file.size<out.size&&/^image\/(png|jpeg|webp)$/.test(t))return file;
+  return out;
+}
+async function hashBlob(b){
+  try{const d=await crypto.subtle.digest('SHA-256',await b.arrayBuffer());
+    return Array.from(new Uint8Array(d).slice(0,10)).map(x=>x.toString(16).padStart(2,'0')).join('');}
+  catch(e){return uid()+uid();}
+}
+async function addImages(id,files){
+  files=Array.from(files||[]).filter(f=>f&&/^image\//.test(f.type||''));
+  if(!files.length||!D.nodes[id])return;
+  if(files.some(f=>f.size>2e6))toast('Adding image'+(files.length>1?'s':'')+'…');
+  const ids=[];let lost=false,bad=0;
+  for(const f of files){
+    if(f.size>40e6){bad++;continue;}
+    const b=await prepImage(f);if(!b){bad++;continue;}
+    const a=await hashBlob(b);
+    if(!await putBlob(a,b))lost=true;
+    ids.push(a);
+  }
+  if(!D.nodes[id])return;
+  const n=N(id),have=n.images||[],fresh=ids.filter((a,i)=>have.indexOf(a)<0&&ids.indexOf(a)===i);
+  if(fresh.length){snap();n.images=have.concat(fresh);render();save();}
+  toast(bad&&!fresh.length?'Could not read that image'
+    :lost?'Image kept in memory only — export before closing'
+    :fresh.length?(fresh.length>1?fresh.length+' images added':'Image added')
+    :'Already on this node');
+}
+function removeImage(id,i){
+  const n=N(id);if(!n||!n.images)return;
+  snap();n.images.splice(i,1);if(!n.images.length)delete n.images;render();save();
+}
+function clipImages(e){
+  const cd=e.clipboardData||window.clipboardData;if(!cd)return [];
+  const out=[];
+  for(const it of Array.from(cd.items||[]))if(it.kind==='file'&&/^image\//.test(it.type)){const f=it.getAsFile();if(f)out.push(f);}
+  if(!out.length)for(const f of Array.from(cd.files||[]))if(/^image\//.test(f.type))out.push(f);
+  return out;
+}
+/* In a text field an image on the clipboard wins only when there is no real text beside it — a
+   file copied in Finder brings its file name as text, a copy from a word processor brings the words */
+function pasteImagesInto(id,e,always){
+  const fs=clipImages(e);if(!fs.length)return false;
+  const cd=e.clipboardData||window.clipboardData,t=(cd.getData('text')||'').trim();
+  if(!always&&t&&!/^[^\n]{1,255}\.(png|jpe?g|gif|webp|heic|heif|avif|bmp|tiff?|svg)$/i.test(t))return false;
+  e.preventDefault();addImages(id,fs);return true;
+}
+const blobToData=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b);});
+async function dataToBlob(u){return (await fetch(u)).blob();}
+function usedImages(d){const s={};for(const k in d.nodes)(d.nodes[k].images||[]).forEach(a=>s[a]=1);return Object.keys(s);}
+/* Drop stored images no map references any more — only after a week unreferenced, so undo in
+   another tab or a restored .bak still finds them. Referenced ones get their clock reset. */
+function gcImages(){
+  if(DEMO)return;
+  const ref={};DB.docs.forEach(d=>usedImages(d).forEach(a=>ref[a]=1));
+  const now=Date.now(),DAY=864e5;
+  idbDo('readwrite',st=>{const r=st.openCursor();r.onsuccess=()=>{const c=r.result;if(!c)return;
+    const v=c.value||{};
+    if(ref[c.key]){if(!(v.t>now-DAY))c.update({blob:v.blob,t:now});}
+    else if(!(v.t>now-7*DAY))c.delete();
+    c.continue();};return null;}).catch(()=>{});
+}
+/* lightbox */
+let LB=null;
+const lbOn=()=>!!LB;
+function openLB(id,i){
+  const n=N(id);if(!n||!(n.images||[]).length)return;
+  LB={id:id,i:clamp(i,0,n.images.length-1)};$('#lb').classList.add('on');paintLB();
+}
+function paintLB(){
+  const n=N(LB.id);if(!n||!(n.images||[]).length)return closeLB();
+  LB.i=clamp(LB.i,0,n.images.length-1);
+  const a=n.images[LB.i],img=$('#lbImg');
+  img.dataset.a=a;img.src=imgURL(a)||'';
+  const many=n.images.length>1;
+  $('#lbPrev').hidden=!many;$('#lbNext').hidden=!many;
+  $('#lbCap').textContent=many?(LB.i+1)+' / '+n.images.length:'';
+}
+function stepLB(d){const n=N(LB.id);LB.i=(LB.i+d+n.images.length)%n.images.length;paintLB();}
+/* remove the image on show; the next one slides in, or the preview closes with the last */
+function delLB(){
+  if(!LB)return;const id=LB.id;
+  removeImage(id,LB.i);toast('Image removed \u2014 \u2318Z to undo');
+  if(N(id)&&(N(id).images||[]).length)paintLB();else closeLB();
+}
+function closeLB(){LB=null;$('#lb').classList.remove('on');$('#lbImg').removeAttribute('src');}
+$('#lbX').onclick=closeLB;$('#lbDel').onclick=delLB;$('#lbPrev').onclick=()=>stepLB(-1);$('#lbNext').onclick=()=>stepLB(1);
+$('#lb').addEventListener('click',e=>{if(e.target.id==='lb')closeLB();});
+$('#addImg').onclick=()=>{if(sel)$('#imgIn').click();};
+$('#imgIn').addEventListener('change',e=>{if(sel)addImages(sel,e.target.files);e.target.value='';});
+/* paste an image onto the selected node (the note editor and inline rename pass images here too) */
+document.addEventListener('paste',e=>{
+  if(e.defaultPrevented||!sel||!D.nodes[sel]||palOn())return;
+  const a=document.activeElement;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return;
+  pasteImagesInto(sel,e,true);
+});
 
 /* ---------- markdown (tiny subset) ---------- */
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -942,7 +1148,7 @@ function renderMap(){
     let e=els[id];
     if(!e){
       e=document.createElement('div');e.dataset.id=id;
-      e.innerHTML='<div class="t"></div><div class="note md"></div><div class="badges"></div>';
+      e.innerHTML='<div class="t"></div><div class="imgs"></div><div class="note md"></div><div class="badges"></div>';
       world.appendChild(e);els[id]=e;fresh.push(id);
     }
     e.className='node'+(id===D.root?' root':'')+(isFree(id)?' free':'')+(v.d===1?' d1':'')+(id===sel?' sel':'')
@@ -954,10 +1160,12 @@ function renderMap(){
     if(n.color){e.dataset.c='1';e.style.setProperty('--nc',accentVar(n.color));}else{delete e.dataset.c;e.style.removeProperty('--nc');}
     const t=e.firstChild;
     if(editing!==id){const tx=n.title||'';if(t.textContent!==tx)t.textContent=tx;t.contentEditable='false';}
-    const note=e.children[1];
+    const ig=e.children[1],ih=thumbsHTML(n,THUMBS),ik=(n.images||[]).join(',');
+    if(ig.dataset.k!==ik){ig.innerHTML=ih;ig.dataset.k=ik;}
+    const note=e.children[2];
     if(showNotes&&n.note){note.style.display='';const h=md(n.note);if(note.dataset.h!==h){note.innerHTML=h;note.dataset.h=h;}}
     else{note.style.display='none';note.innerHTML='';note.dataset.h='';}
-    const bd=e.children[2],bh=nodeBadges(n);
+    const bd=e.children[3],bh=nodeBadges(n);
     bd.style.display=bh?'':'none';if(bd.dataset.h!==bh){bd.innerHTML=bh;bd.dataset.h=bh;}
     const old=e.querySelector('.fold');if(old)old.remove();
     if(n.children.length){
@@ -1160,10 +1368,10 @@ stage.addEventListener('pointerdown',e=>{
   if(linkMode){e.preventDefault();finishLink(id,e.metaKey||e.ctrlKey);return;}
   if(editing===id)return;
   if(editing)commitEdit();
-  const wasSel=(sel===id),onTitle=!!e.target.closest('.t');
+  const wasSel=(sel===id),onTitle=!!e.target.closest('.t'),th=e.target.closest('[data-th]');
   select(id);
   drag={node:id,x:e.clientX,y:e.clientY,moved:false,ox:pos[id].x,oy:pos[id].y,
-        wasSel:wasSel,onTitle:onTitle};
+        wasSel:wasSel,onTitle:onTitle,th:th?+th.dataset.th:null};
   try{stage.setPointerCapture(e.pointerId);}catch(err){}
 });
 stage.addEventListener('pointermove',e=>{
@@ -1215,6 +1423,7 @@ stage.addEventListener('pointerup',e=>{
     descendants(d.node).forEach(c=>{if(els[c])els[c].style.transition='';});renderMap();
   }
   else if(d.moved){renderMap();}
+  else if(d.th!=null){openLB(d.node,d.th);}
   else if(d.wasSel&&d.onTitle&&!editing&&!linkMode){
     scheduleClickEdit(d.node,e.clientX,e.clientY);
   }
@@ -1227,7 +1436,7 @@ function hitAt(sel_,e){
   return h&&h.closest?h.closest(sel_):null;
 }
 stage.addEventListener('dblclick',e=>{
-  if(hitAt('[data-st]',e)){e.stopPropagation();return;}
+  if(hitAt('[data-st]',e)||hitAt('[data-th]',e)){e.stopPropagation();return;}
   cancelClickEdit();
   const ne=hitAt('.node',e);
   if(ne)openDetail(ne.dataset.id);
@@ -1238,6 +1447,22 @@ stage.addEventListener('wheel',e=>{
   if(e.ctrlKey||e.metaKey)zoomAt(Math.pow(.99,e.deltaY),e.clientX,e.clientY);
   else{view.x-=e.deltaX;view.y-=e.deltaY;applyView();save();}
 },{passive:false});
+/* drop image files onto a node */
+let imgDropEl=null;
+const dragHasFiles=e=>!!e.dataTransfer&&Array.from(e.dataTransfer.types||[]).indexOf('Files')>=0;
+function setImgDrop(el){if(imgDropEl===el)return;if(imgDropEl)imgDropEl.classList.remove('imgdrop');imgDropEl=el;if(el)el.classList.add('imgdrop');}
+stage.addEventListener('dragover',e=>{
+  if(!dragHasFiles(e))return;
+  e.preventDefault();const ne=hitAt('.node',e);
+  e.dataTransfer.dropEffect=ne?'copy':'none';setImgDrop(ne);
+});
+stage.addEventListener('dragleave',e=>{if(!stage.contains(e.relatedTarget))setImgDrop(null);});
+stage.addEventListener('drop',e=>{
+  if(!dragHasFiles(e))return;
+  e.preventDefault();const ne=hitAt('.node',e);setImgDrop(null);
+  if(!ne)return toast('Drop the image onto a node');
+  select(ne.dataset.id);addImages(ne.dataset.id,e.dataTransfer.files);
+});
 /* hovering a node shows its connections and their labels */
 stage.addEventListener('pointerover',e=>{
   if(e.pointerType!=='mouse'||drag)return;
@@ -1580,7 +1805,7 @@ function onEditKey(e){
 }
 function onEditInput(){if(mode==='map')relayout();}
 function onEditBlur(){if(editing)commitEdit();}
-function onEditPaste(e){e.preventDefault();
+function onEditPaste(e){if(editing&&pasteImagesInto(editing,e))return;e.preventDefault();
   const t=(e.clipboardData||window.clipboardData).getData('text').replace(/\s*\n\s*/g,' ');
   document.execCommand('insertText',false,t);}
 function relayout(){
@@ -1620,6 +1845,9 @@ function olNode(id,depth){
     tg.ondblclick=ev=>ev.stopPropagation();
     t.appendChild(tg);}
   if(n.note){const nt=document.createElement('div');nt.className='note md';nt.innerHTML=md(n.note);tw.appendChild(nt);}
+  if((n.images||[]).length){const ig=document.createElement('div');ig.className='imgs ol';ig.innerHTML=thumbsHTML(n,6);
+    ig.onpointerdown=ev=>{const t=ev.target.closest('[data-th]');if(!t)return;ev.stopPropagation();ev.preventDefault();select(id);openLB(id,+t.dataset.th);};
+    tw.appendChild(ig);}
   const ls=linksOf(id);
   for(const l of ls){
     const other=l.from===id?l.to:l.from;
@@ -1744,6 +1972,18 @@ function renderInspector(){
     b.onclick=()=>{setColor(sel,a.id);colorPop(false);};
     cw.appendChild(b);
   });
+  const iw=$('#i-imgs'),ik=sel+'|'+(n.images||[]).join(',');
+  if(iw.dataset.k!==ik){
+    iw.dataset.k=ik;iw.innerHTML=thumbsHTML(n,0);
+    $$('.th',iw).forEach(t=>{const i=+t.dataset.th;
+      const x=document.createElement('span');x.className='x';x.title='Remove image';x.tabIndex=0;x.innerHTML=ic('close','s');
+      x.onclick=ev=>{ev.stopPropagation();removeImage(sel,i);};t.appendChild(x);
+      t.onclick=()=>openLB(sel,i);});
+    const em=iw.nextElementSibling&&iw.nextElementSibling.classList.contains('empty')?iw.nextElementSibling:null;
+    if(!(n.images||[]).length){if(!em){const d=document.createElement('div');d.className='empty';
+        d.textContent=TOUCH?'Tap Add to attach an image.':'Paste (⌘V) or drop an image onto the node.';iw.after(d);}}
+    else if(em)em.remove();
+  }
   const lw=$('#i-links');lw.innerHTML='';
   const ls=linksOf(sel);
   if(!ls.length)lw.innerHTML='<div class="empty">No connections yet. '
@@ -1951,6 +2191,7 @@ function onNoteInput(){
 }
 NOTE.addEventListener('blur',()=>{if(fieldDirty&&fieldPrev){hist.push(fieldPrev);fut.length=0;}fieldDirty=false;});
 NOTE.addEventListener('paste',e=>{
+  if(sel&&pasteImagesInto(sel,e))return;
   e.preventDefault();
   const t=(e.clipboardData||window.clipboardData).getData('text');
   document.execCommand('insertText',false,t);
@@ -2094,6 +2335,17 @@ const inField=()=>{const a=document.activeElement;return !!a&&(a.tagName==='INPU
 document.addEventListener('keydown',e=>{
   const meta=e.metaKey||e.ctrlKey;
   if(palOn()){palKey(e);return;}
+  if(lbOn()){
+    if(e.key==='Escape'||e.key===' '){e.preventDefault();closeLB();}
+    else if(e.key==='ArrowLeft'){e.preventDefault();stepLB(-1);}
+    else if(e.key==='ArrowRight'){e.preventDefault();stepLB(1);}
+    else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delLB();}
+    else if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();
+      const id=LB.id,i=LB.i;e.shiftKey?redo():undo();
+      if(N(id)&&(N(id).images||[]).length){LB.id=id;LB.i=i;paintLB();}else closeLB();}
+    else if(!e.metaKey&&!e.ctrlKey)e.preventDefault();
+    return;
+  }
   if($('#help').classList.contains('on')){if(e.key==='Escape'||e.key==='?'){e.preventDefault();$('#help').classList.remove('on');$('#scrim').classList.remove('on');}return;}
   if(editing)return;
   if(meta){
@@ -2310,9 +2562,11 @@ $('#themeBtn').onclick=cycleTheme;
 $('#matrixBtn').onclick=()=>{matrixOn=!matrixOn;try{localStorage.setItem(KEY+'.matrix',matrixOn?'1':'0')}catch(e){}render();};
 $('#notesBtn').onclick=()=>{showNotes=!showNotes;try{localStorage.setItem(KEY+'.notes',showNotes?'1':'')}catch(e){}render();};
 $('#helpBtn').onclick=showHelp;
-/* ---- depth slider: expand/collapse the whole map to a level (root = 0, level 1 = its children) ---- */
-function treeDepth(){let m=0;(function w(id,d){if(d>m)m=d;for(const c of N(id).children)w(c,d+1);})(D.root,0);return m;}
-function shownDepth(){let m=0;for(const v of flat())if(v.d>m)m=v.d;return m;}
+/* ---- depth slider: expand/collapse the whole map to a level. Every central node — the root and
+   each free node — counts as depth 0, so the slider moves all of them together (level 1 = their children) ---- */
+const centres=()=>[D.root].concat(D.free||[]);
+function treeDepth(){let m=0;const w=(id,d)=>{if(d>m)m=d;for(const c of N(id).children)w(c,d+1);};centres().forEach(r=>w(r,0));return m;}
+function shownDepth(){let m=0;const w=(id,d)=>{if(d>m)m=d;if(!N(id).collapsed)for(const c of N(id).children)w(c,d+1);};centres().forEach(r=>w(r,0));return m;}
 function syncLevel(){
   const inp=$('#lvlIn');if(!inp||!D.nodes[D.root])return;
   const max=Math.max(1,treeDepth()),v=Math.max(1,Math.min(max,shownDepth()));
@@ -2320,7 +2574,8 @@ function syncLevel(){
   $('#lvlV').textContent=v+'/'+max;
 }
 function applyLevel(L){
-  (function w(id,d){const n=N(id);if(n.children.length)n.collapsed=d>=L;for(const c of n.children)w(c,d+1);})(D.root,0);
+  const w=(id,d)=>{const n=N(id);if(n.children.length)n.collapsed=d>=L;for(const c of n.children)w(c,d+1);};
+  centres().forEach(r=>w(r,0));
   if(sel){const hid=ancestors(sel).filter(a=>N(a).collapsed);if(hid.length)sel=hid[hid.length-1];}
   fixSel();render();save();
 }
@@ -2349,7 +2604,18 @@ function dl(name,data,type){
   const b=new Blob([data],{type:type||'application/octet-stream'}),u=URL.createObjectURL(b),a=document.createElement('a');
   a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),3000);toast('Exported '+name);
 }
-function exportJSON(){dl(D.name.replace(/[\\/:*?"<>|]/g,'-')+'.json',JSON.stringify(D,null,2),'application/json');}
+/* the map plus the bytes of every image it uses, so the file stands on its own */
+async function exportJSON(){
+  const out=JSON.parse(JSON.stringify(D)),ids=usedImages(D);
+  let miss=0;
+  if(ids.length){
+    out.assets={};
+    for(const a of ids){const b=await getBlob(a);
+      if(b)out.assets[a]={type:b.type||'image/png',data:await blobToData(b)};else miss++;}
+  }
+  dl(D.name.replace(/[\\/:*?"<>|]/g,'-')+'.json',JSON.stringify(out,null,2),'application/json');
+  if(miss)setTimeout(()=>toast(miss+' image'+(miss>1?'s were':' was')+' missing and not exported'),1200);
+}
 function toMarkdown(){
   const out=['# '+(N(D.root).title||'Untitled')];
   if(N(D.root).note)out.push('',N(D.root).note);
@@ -2359,6 +2625,7 @@ function toMarkdown(){
       const st=ST(n.status);
       out.push(pad+'- '+(n.title||'untitled')+(st?' `'+st.label+'`':''));
       if(n.note)out.push(...n.note.split('\n').map(l=>l.trim()?pad+'  > '+l:pad+'  >'));
+      (n.images||[]).forEach(a=>out.push(pad+'  > ![image](asset:'+a+')'));
       w(c,d+1);
     }
   })(D.root,0);
@@ -2394,6 +2661,20 @@ function wrap(text,maxW,font){
   if(cur)lines.push(cur);
   return lines.length?lines:[''];
 }
+/* square, pre-cropped thumbnails as data URLs for SVG/PNG export */
+const THD={};
+async function thumbData(a){
+  if(THD[a])return THD[a];
+  const b=await getBlob(a);if(!b)return null;
+  try{const bm=await createImageBitmap(b),S=108,m=Math.min(bm.width,bm.height);
+    const c=document.createElement('canvas');c.width=c.height=S;
+    c.getContext('2d').drawImage(bm,(bm.width-m)/2,(bm.height-m)/2,m,m,0,0,S,S);
+    return THD[a]=c.toDataURL('image/jpeg',.85);}catch(e){return null;}
+}
+async function prepExportThumbs(){
+  if(mode!=='map'){mode='map';render();}
+  for(const v of flat())for(const a of (N(v.id).images||[]).slice(0,THUMBS))await thumbData(a);
+}
 function buildSVG(){
   if(mode!=='map'){mode='map';render();}
   const bb=bbox(),pad=44,W=bb.w+pad*2,H=bb.h+pad*2;
@@ -2415,11 +2696,20 @@ function buildSVG(){
     lines.forEach((l,i)=>s.push('<tspan x="'+padx+'" y="'+(pady+lh*i+fs*.96)+'">'+esc(l)+'</tspan>'));
     s.push('</text>');
     let by=pady+lh*lines.length+3;
+    const k=view.k||1,nr=els[id]?els[id].getBoundingClientRect():null;
+    if(nr)$$('.imgs .th',els[id]).forEach(t=>{
+      const im=t.querySelector('img'),u=im&&THD[im.dataset.a];if(!u)return;
+      const r=t.getBoundingClientRect(),x=(r.left-nr.left)/k,y=(r.top-nr.top)/k,w=r.width/k;
+      s.push('<image x="'+x+'" y="'+y+'" width="'+w+'" height="'+w+'" href="'+u+'"/>');
+      const mo=t.querySelector('.more');
+      if(mo)s.push('<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+w+'" fill="#000" opacity=".48"/><text x="'+(x+w/2)+'" y="'+(y+w/2+4.5)+'" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">'+esc(mo.textContent)+'</text>');
+    });
+    const bdEl=els[id]&&els[id].querySelector('.badges');
+    if(bdEl&&bdEl.offsetParent)by=(bdEl.getBoundingClientRect().top-nr.top)/k;
     const noteEl=showNotes&&n.note&&els[id]?els[id].querySelector('.note'):null;
     if(noteEl&&noteEl.offsetParent){
       /* Lay the note out from the rendered DOM, block by block, so the export shows what the map
          shows (link text, not URLs; bullets; headings) and every line lands inside the box. */
-      const k=view.k||1,nr=els[id].getBoundingClientRect();
       const BL='h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,div';
       const blocks=Array.from(noteEl.querySelectorAll(BL)).filter(b=>!b.querySelector(BL));
       if(!blocks.length)blocks.push(noteEl);
@@ -2439,7 +2729,7 @@ function buildSVG(){
         s.push('</text>');
       }
       const ur=noteEl.getBoundingClientRect();
-      by=(ur.bottom-nr.top)/k+3;
+      if(!(bdEl&&bdEl.offsetParent))by=(ur.bottom-nr.top)/k+3;
     }
     const st=ST(n.status);
     if(st){
@@ -2454,8 +2744,9 @@ function buildSVG(){
   s.push('</svg>');
   return s.join('');
 }
-function exportSVG(){dl(D.name.replace(/[\\/:*?"<>|]/g,'-')+'.svg',buildSVG(),'image/svg+xml');}
-function exportPNG(){
+async function exportSVG(){await prepExportThumbs();dl(D.name.replace(/[\\/:*?"<>|]/g,'-')+'.svg',buildSVG(),'image/svg+xml');}
+async function exportPNG(){
+  await prepExportThumbs();
   const svg=buildSVG(),m=svg.match(/width="(\d+)" height="(\d+)"/),w=+m[1],h=+m[2],sc=2;
   const img=new Image();
   img.onload=()=>{
@@ -2472,14 +2763,21 @@ function exportPNG(){
 $('#fileIn').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{
+  r.onload=async()=>{
+    let d;
     try{
-      const d=JSON.parse(r.result);
+      d=JSON.parse(r.result);
       if(!d.nodes||!d.root||!d.nodes[d.root])throw 0;
-      d.id=uid();d.name=(d.name||f.name.replace(/\.json$/,''))+'';d.updated=Date.now();
-      normalize(d);DB.docs.push(d);openDoc(d.id);toast('Imported');
-    }catch(err){toast('Not a valid mindmap JSON');}
+    }catch(err){e.target.value='';return toast('Not a valid mindmap JSON');}
     e.target.value='';
+    /* images travel inline in the file; move them into the image store, keep only ids in the map */
+    const as=d.assets&&typeof d.assets==='object'?d.assets:{};delete d.assets;
+    let lost=false;
+    for(const a in as){const v=as[a];if(!v||typeof v.data!=='string')continue;
+      try{if(!await putBlob(a,await dataToBlob(v.data)))lost=true;}catch(err){}}
+    d.id=uid();d.name=(d.name||f.name.replace(/\.json$/,''))+'';d.updated=Date.now();
+    normalize(d);DB.docs.push(d);openDoc(d.id);
+    toast(lost?'Imported — images kept in memory only':'Imported');
   };
   r.readAsText(f);
 });
@@ -2762,6 +3060,7 @@ try{theme=localStorage.getItem(KEY+'.theme')||'auto';}catch(e){}
 try{const f=localStorage.getItem(KEY+'.focus');if(f!==null)focusMode=!!f;}catch(e){}
 applyTheme();applyFocus();
 load();syncDoc();syncMedia();render();
+setTimeout(gcImages,4000);
 setSaved(STORE_OK?'saved':'off');
 if(!STORE_OK)setTimeout(()=>toast('Autosave unavailable here — export before you close the tab'),700);
 if(!D.view||NARROW)requestAnimationFrame(NARROW?fitMobile:fit);else applyView();

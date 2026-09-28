@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.1.0 — 2026-09-28
+
+### Images
+
+- Any node can hold images. Select a node and paste (⌘V), drop image files onto it, or use
+  **Add** in the detail panel's new **Images** section.
+- The map shows them as fixed square thumbnails under the title — up to four, then **+N**.
+- Click a thumbnail for a full-size preview. ← → step through the node's images; the bin button
+  or Delete removes the one on show, and ⌘Z brings it back.
+- Images are shrunk to 1600px on the long edge and saved as WebP. GIF and SVG are kept as they
+  are. The same image added twice is stored once.
+- They are stored in the browser's IndexedDB, not in `localStorage`, so they don't eat into the
+  space your maps use. **Export ▾ → JSON** carries them inside the file (a top-level `assets`
+  object) and **Import** puts them back, so the JSON is still the whole map.
+- SVG and PNG exports draw the thumbnails. Markdown export writes an `![image](asset:…)`
+  placeholder under the node.
+- In a note or while renaming, a paste with real text still pastes the text; only an image on
+  its own (or a file copied in Finder) is added as an image.
+
+### Canvas
+
+- The level slider now folds and unfolds every central node together — free nodes included —
+  instead of only the main tree.
+
 ## 1.0.2 — 2026-09-24
 
 ### Search

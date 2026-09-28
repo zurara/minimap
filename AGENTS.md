@@ -82,6 +82,12 @@ a node's *note* jumps to another node **in the same map**, matched on exact titl
 renders greyed out if nothing matches. Linking a topic that isn't in the map produces a dead
 end, not a promise.
 
+**Images are not authored through markdown.** A node may carry `"images": ["<id>", …]`, and an
+exported file then has a top-level `"assets": {"<id>": {"type", "data": "data:…"}}` holding the
+bytes. `graft.py` keeps both untouched. `md2minimap.py` never creates them, and the app's Markdown
+export only writes an `![image](asset:<id>)` placeholder — so converting that Markdown back loses
+the images. To change a map that has images, graft into its JSON rather than round-tripping it.
+
 **Editing a JSON file does not change an open map.** The app loaded it into `localStorage`.
 After any edit or graft, the user must **Files ▾ → Import** the file again — and then delete
 the stale copy, because importing adds a second map rather than updating the first. Say this

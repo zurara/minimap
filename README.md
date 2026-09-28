@@ -19,6 +19,8 @@ means:
 - Maps you make are visible only to you, on that browser, on that machine.
 - Sending this file to someone else sends the app, never your maps.
 - Clearing site data, or opening it in a different browser, gives you an empty start.
+- Images you add to nodes are kept in the same browser too (in IndexedDB, which has far more room
+  than `localStorage`). An exported JSON file carries them inside it.
 
 So for anything you care about, use **Export ▾ → JSON**. That file is the real backup, and
 **Import JSON** brings it back — including on someone else's copy, which is how you hand a map to
@@ -83,6 +85,7 @@ The map you see on first run explains itself. The short version:
 | `⌘Enter` | notes (markdown) |
 | `⌘L` | connect two nodes across branches |
 | `⌘`-click canvas | start a free node |
+| `⌘V` | paste an image onto the selected node (or drop one on it) |
 | `⌘`-click a link | open it, or jump to a `[[wiki link]]` |
 | `?` | every shortcut |
 
