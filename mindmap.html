@@ -226,11 +226,12 @@ kbd{font:11px/1 var(--sans);letter-spacing:.02em;border:1px solid var(--rule-2);
 #i-note .st{text-decoration:line-through;color:var(--ink-2)}
 #i-note .hi,#i-note .cd{background:var(--rule);border-radius:3px}
 #i-note .wk{background:var(--rule);border-radius:3px}
+#i-note .tg{color:var(--ink-2)}
 #i-note .lk{text-decoration:underline;text-decoration-color:var(--rule-2);text-underline-offset:2px}
 #i-note .lk .u{color:var(--ink-3);text-decoration:none}
 #i-note .bu{text-decoration:underline;text-decoration-color:var(--rule-2);text-underline-offset:2px}
 html.cmd .node .note a[href]{cursor:pointer;color:var(--ink);text-decoration-color:currentColor}
-#i-note.cmd .lk,#i-note.cmd .bu,#i-note.cmd .wk{cursor:pointer;text-decoration:underline;text-decoration-color:currentColor}
+#i-note.cmd .lk,#i-note.cmd .bu,#i-note.cmd .wk,#i-note.cmd .tg{cursor:pointer;text-decoration:underline;text-decoration-color:currentColor}
 #i-note .h{font-weight:650}
 #i-note .h1{font-size:1.28em}
 #i-note .h2{font-size:1.15em}
@@ -252,6 +253,8 @@ html.cmd .node .note a[href]{cursor:pointer;color:var(--ink);text-decoration-col
 .md a{color:var(--ink);text-decoration-color:var(--rule-2);text-underline-offset:2px}
 .md a.wiki{background:var(--rule);color:var(--ink);text-decoration:none;padding:0 3px;border-radius:3px}
 .md a.wiki.miss{background:none;color:var(--ink-3);border-bottom:1px dashed var(--rule-2)}
+.md a.tag{color:var(--ink-2);text-decoration:none;cursor:pointer}
+.md a.tag:hover{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule-2)}
 .md hr{border:0;border-top:1px solid var(--rule);margin:12px 0}
 .md mark{background:var(--rule);color:var(--ink);padding:0 2px;border-radius:3px}
 .tag{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--rule-2);border-radius:20px;
@@ -574,10 +577,10 @@ html.touch-ui #insp{bottom:0;z-index:30}
         <div class="sec">Status <span class="sp"></span><button class="btn" id="stEditBtn" style="height:20px;font-size:11px;padding:0 6px">Edit presets</button></div>
         <div class="stats" id="i-status"></div>
         <div id="stEdit"></div>
-        <div class="sec">Note <span class="sp"></span><span style="font-family:var(--sans);text-transform:none;letter-spacing:0">markdown · [[wiki links]] · ⌘click opens</span></div>
+        <div class="sec">Note <span class="sp"></span><span style="font-family:var(--sans);text-transform:none;letter-spacing:0">markdown · [[wiki links]] · #tags · ⌘click opens</span></div>
         <div class="notewrap">
           <div id="i-note" spellcheck="false" role="textbox" aria-multiline="true"></div>
-          <div id="i-ph">Markdown supported.<br><br>**bold** *italic* `code` ==highlight==<br>- lists, &gt; quotes, # headings<br>[link](https://…) and [[Another node]]</div>
+          <div id="i-ph">Markdown supported.<br><br>**bold** *italic* `code` ==highlight==<br>- lists, &gt; quotes, # headings<br>[link](https://…) and [[Another node]]<br>#tags — click one to find every node that has it</div>
         </div>
         <div id="i-prev" class="md"></div>
         <div class="sec">Images <span class="sp"></span><button class="btn" id="addImg" style="height:22px;font-size:12px;padding:0 6px"><svg class="i s"><use href="#ri-img"/></svg>Add</button></div>
@@ -694,6 +697,11 @@ function detach(id){
 function parentOf(id){return P[id];}
 function ancestors(id){const a=[];let p=P[id];while(p){a.push(p);p=P[p];}return a;}
 function descendants(id,out){out=out||[];for(const c of N(id).children){out.push(c);descendants(c,out);}return out;}
+/* #tag: '#' at a word start, then anything up to whitespace or punctuation; pure numbers (#1) aren't tags */
+const TAG_CH='[^\\s#\\[\\]()<>{}*`~=,.;:!?&\'"，。；：！？、（）【】「」《》]';
+const TAG_RX=new RegExp('(^|[\\s(（])#('+TAG_CH+'+)','g');
+const isTag=t=>!/^\d+$/.test(t);
+function tagsOf(s){const out=[];String(s||'').replace(TAG_RX,(m,p,t)=>{if(isTag(t))out.push(t.toLowerCase());return m;});return out;}
 function findByTitle(t){t=String(t).trim().toLowerCase();for(const id in D.nodes)if((D.nodes[id].title||'').trim().toLowerCase()===t)return id;return null;}
 /* the main-tree node a free root follows: the first main-tree node it is connected to */
 function anchorOf(fr){for(const l of D.links){const o=l.from===fr?l.to:l.to===fr?l.from:null;if(o&&MAIN[o])return o;}return null;}
@@ -1024,12 +1032,16 @@ function inlineMd(s){
   s=s.replace(/\[\[([^\][]+)\]\]/g,(m,t)=>{const id=findByTitle(t);
     return id?'<a class="wiki" data-goto="'+id+'">'+t+'</a>':'<a class="wiki miss" title="no node with this title">'+t+'</a>';});
   s=s.replace(/\[([^\][]+)\]\(([^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-  s=s.replace(/(^|[\s(])((?:https?:\/\/|www\.)[^\s<)]+)/g,(m,p,u)=>p+'<a href="'+(u.indexOf('www')===0?'https://'+u:u)+'" target="_blank" rel="noopener">'+u+'</a>');
-  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
-  s=s.replace(/(^|[^*\w])\*([^*\n]+)\*/g,'$1<em>$2</em>');
-  s=s.replace(/(^|[^_\w])_([^_\n]+)_/g,'$1<em>$2</em>');
-  s=s.replace(/~~([^~]+)~~/g,'<del>$1</del>');
-  s=s.replace(/==([^=]+)==/g,'<mark>$1</mark>');
+  s=s.replace(/(^|[\s(])((?:https?:\/\/|www\.)[^\s<)]+)/g,(m,p,u)=>p+'<a class="bare" href="'+(u.indexOf('www')===0?'https://'+u:u)+'" target="_blank" rel="noopener">'+u+'</a>');
+  /* emphasis only touches text: never inside tag attributes (target="_blank") or a bare URL */
+  s=s.split(/(<a class="bare"[^>]*>[\s\S]*?<\/a>|<[^>]+>)/).map((part,i)=>i%2?part:part
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*/g,'$1<em>$2</em>')
+    .replace(/(^|[^_\w])_([^_\n]+)_/g,'$1<em>$2</em>')
+    .replace(/~~([^~]+)~~/g,'<del>$1</del>')
+    .replace(/==([^=]+)==/g,'<mark>$1</mark>')).join('');
+  s=s.split(/(<a\b[^>]*>[\s\S]*?<\/a>|<[^>]+>)/).map((part,i)=>i%2?part:part.replace(TAG_RX,(m,p,t)=>
+    isTag(t)?p+'<a class="tag" data-tag="'+t+'" title="Find nodes tagged #'+t+'">#'+t+'</a>':m)).join('');
   s=s.replace(new RegExp(SENT+'(\\d+)'+SENT,'g'),(m,i)=>'<code>'+esc(code[+i])+'</code>');
   return s;
 }
@@ -1473,7 +1485,9 @@ stage.addEventListener('pointerleave',()=>setHover(null));
 stage.addEventListener('click',e=>{
   if(e.target.closest&&e.target.closest('.node .note a[href]')){e.preventDefault();return;}  /* opened on ⌘-pointerdown; plain click selects */
   const a=hitAt('a[data-goto]',e);
-  if(a){e.preventDefault();cancelClickEdit();select(a.dataset.goto);centerOn(a.dataset.goto,true);}
+  if(a){e.preventDefault();cancelClickEdit();select(a.dataset.goto);centerOn(a.dataset.goto,true);return;}
+  const tg=hitAt('a[data-tag]',e);
+  if(tg){e.preventDefault();cancelClickEdit();openPal('#'+tg.dataset.tag);}
 });
 
 /* ---------- render switch ---------- */
@@ -2060,7 +2074,7 @@ function renderInspector(){
 /* ---- styled markdown source editor ---- */
 const NOTE=$('#i-note');
 let composing=false;
-const INLINE_RX=/(`[^`]*`?)|(\*\*[^*]*\*\*?)|(~~[^~]*~~?)|(==[^=]*==?)|(\[\[[^\]]*\]?\]?)|(\[[^\]]*\]\([^)\s]*\)?)|((?:https?:\/\/|www\.)[^\s<)\]]+)|(\*[^*\s][^*]*\*)|(_[^_\s][^_]*_)/g;
+const INLINE_RX=new RegExp(/(`[^`]*`?)|(\*\*[^*]*\*\*?)|(~~[^~]*~~?)|(==[^=]*==?)|(\[\[[^\]]*\]?\]?)|(\[[^\]]*\]\([^)\s]*\)?)|((?:https?:\/\/|www\.)[^\s<)\]]+)|(\*[^*\s][^*]*\*)|(_[^_\s][^_]*_)/.source+'|(?<![^\\s(（])(#'+TAG_CH+'+)','g');
 const mk=t=>'<span class="mk">'+esc(t)+'</span>';
 function wrapPair(cls,open,inner,close){return '<span class="'+cls+'">'+mk(open)+esc(inner)+mk(close)+'</span>';}
 function hlInline(t){
@@ -2069,7 +2083,8 @@ function hlInline(t){
   while((m=INLINE_RX.exec(t))){
     out+=esc(t.slice(last,m.index));
     const g=m[0];
-    if(m[1])out+=wrapPair('cd','`',g.slice(1,g.endsWith('`')&&g.length>1?-1:undefined),g.endsWith('`')&&g.length>1?'`':'');
+    if(m[10]){out+=isTag(g.slice(1))?'<span class="tg">'+esc(g)+'</span>':esc(g);}
+    else if(m[1])out+=wrapPair('cd','`',g.slice(1,g.endsWith('`')&&g.length>1?-1:undefined),g.endsWith('`')&&g.length>1?'`':'');
     else if(m[2]){const c=g.endsWith('**')&&g.length>3?'**':'';out+=wrapPair('b','**',g.slice(2,c?-2:undefined),c);}
     else if(m[3]){const c=g.endsWith('~~')&&g.length>3?'~~':'';out+=wrapPair('st','~~',g.slice(2,c?-2:undefined),c);}
     else if(m[4]){const c=g.endsWith('==')&&g.length>3?'==':'';out+=wrapPair('hi','==',g.slice(2,c?-2:undefined),c);}
@@ -2209,8 +2224,9 @@ NOTE.addEventListener('keydown',e=>{
 });
 /* ⌘/Ctrl-click a link in the note editor opens it; [[wiki]] jumps to the node */
 function noteLinkAt(el){
-  const lk=el.closest&&el.closest('#i-note .lk, #i-note .bu, #i-note .wk');
+  const lk=el.closest&&el.closest('#i-note .lk, #i-note .bu, #i-note .wk, #i-note .tg');
   if(!lk)return null;
+  if(lk.classList.contains('tg'))return {tag:lk.textContent.slice(1)};
   if(lk.classList.contains('wk'))return {wiki:lk.textContent.replace(/^\[\[|\]\]$/g,'')};
   let u=lk.classList.contains('bu')?lk.textContent:((lk.querySelector('.u')||{}).textContent||'');
   if(!u)return null;
@@ -2222,6 +2238,7 @@ NOTE.addEventListener('mousedown',e=>{
   const t=noteLinkAt(e.target);if(!t)return;
   e.preventDefault();e.stopPropagation();
   if(t.url)window.open(t.url,'_blank','noopener');
+  else if(t.tag){NOTE.blur();openPal('#'+t.tag);}
   else{const id=findByTitle(t.wiki);if(id){select(id);if(mode==='map')centerOn(id,true);}else toast('No node titled “'+t.wiki+'”');}
 });
 const setCmd=on=>{NOTE.classList.toggle('cmd',on);document.documentElement.classList.toggle('cmd',on);};
@@ -2272,7 +2289,9 @@ $('#prevBtn').onclick=()=>{const p=$('#i-prev'),on=p.classList.toggle('on');
 $('#addLink').onclick=startLink;
 $('#insp').addEventListener('click',e=>{
   const a=e.target.closest('a[data-goto]');
-  if(a){e.preventDefault();select(a.dataset.goto);if(mode==='map')centerOn(a.dataset.goto,true);}
+  if(a){e.preventDefault();select(a.dataset.goto);if(mode==='map')centerOn(a.dataset.goto,true);return;}
+  const tg=e.target.closest('a[data-tag]');
+  if(tg){e.preventDefault();openPal('#'+tg.dataset.tag);}
 });
 $('#matrix').addEventListener('click',e=>{
   const a=e.target.closest('[data-goto]');
@@ -2280,7 +2299,9 @@ $('#matrix').addEventListener('click',e=>{
 });
 $('#outline').addEventListener('click',e=>{
   const a=e.target.closest('a[data-goto]');
-  if(a){e.preventDefault();select(a.dataset.goto);}
+  if(a){e.preventDefault();select(a.dataset.goto);return;}
+  const tg=e.target.closest('a[data-tag]');
+  if(tg){e.preventDefault();openPal('#'+tg.dataset.tag);}
 });
 
 /* ---------- navigation ---------- */
@@ -2430,10 +2451,14 @@ function palFilter(q){
   w(D.root,'');(D.free||[]).forEach(fr=>w(fr,'free'));
   const skip={};
   if(linkMode){skip[linkMode.from]=1;linksOf(linkMode.from).forEach(l=>{skip[l.from]=1;skip[l.to]=1;});}
-  palQ=q;palHits=(q?all.filter(a=>(a.t+' '+a.note).toLowerCase().indexOf(q)>=0):all).filter(a=>!skip[a.id]).slice(0,60);
+  const tq=q[0]==='#'&&q.indexOf(' ')<0?q.slice(1):null;
+  const hit=tq!=null?a=>tagsOf(a.t+' '+a.note).some(t=>t.indexOf(tq)===0)
+                    :a=>(a.t+' '+a.note).toLowerCase().indexOf(q)>=0;
+  palQ=q;palHits=(q?all.filter(hit):all).filter(a=>!skip[a.id]).slice(0,60);
   /* a query always offers "Create …" as the first row; the highlight starts on the best match */
-  if(q)palHits.unshift({create:true});
-  palIdx=q&&palHits.length>1?1:0;palDraw();
+  const offerNew=q&&tq==null;  /* a tag search only finds; it doesn't offer "Create #tag" */
+  if(offerNew)palHits.unshift({create:true});
+  palIdx=offerNew&&palHits.length>1?1:0;palDraw();
 }
 function palDraw(){
   const r=$('#palRes');r.innerHTML='';

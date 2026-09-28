@@ -19,6 +19,16 @@
 - In a note or while renaming, a paste with real text still pastes the text; only an image on
   its own (or a file copied in Finder) is added as an image.
 
+### Notes
+
+- Notes take `#tags`. Write `#design` or `#设计` anywhere in a note; a `#` only starts a tag at
+  the start of a word, so URL fragments, `x#y` and code stay as they are, and `#1` is not a tag.
+- Click a tag on the map, in the outline or in the note preview (⌘click in the editor) to open
+  search on it, listing every node that carries it. In search, `#des` matches tags that start
+  with it and `#` alone lists every tagged node.
+- Fixed: a note line with two links no longer breaks them — `_blank` inside the first link was
+  read as the start of italics.
+
 ### Canvas
 
 - The level slider now folds and unfolds every central node together — free nodes included —
